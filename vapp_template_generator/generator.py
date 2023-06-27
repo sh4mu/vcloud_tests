@@ -36,24 +36,27 @@ vapp_description = 'Custom vApp template for celfocus'
 network_name = 'oam'
 script_path = '/opt/config/bin/test'
 
-vapp_resource = vdc.create_vapp(
-    name=vapp_name,
-    description=vapp_description
-)
+result = vdc.create_vapp(name=vapp_name,                
+                description=vapp_description)
 
-new_vapp = VApp(client, href=vapp_resource.get('href'))
-
+task = client.get_task_monitor().wait_for_status(task=result.Tasks.Task[0])
+# assert task.get('status') == TaskStatus.SUCCESS.value
+    
+new_vapp = VApp(client, resource=vdc.get_vapp(vapp_name))
+for link in new_vapp.get_resource().findall('{http://www.vmware.com/vcloud/v1.5}Link'):
+    print('2 rel {}, media {}, name {}'.format(link.get('rel'), link.get('type'), link.get('name')))
+    
 ## Add VMs to vApp from existing VM template
 spec_pilot_a = {'source_vm_name': catalog_vm.get_resource().get('name'), 'vapp': catalog_vapp.get_resource()}
 spec_pilot_a['target_vm_name'] = 'xanana-0-0-1'
 spec_pilot_a['hostname'] = 'xanana-0-0-1'
-# spec_pilot_a['network'] = 'oam'
+spec_pilot_a['network'] = 'oam'
 # spec_pilot_a['ip_allocation_mode'] = 'pool'
 
 spec_pilot_b = {'source_vm_name': catalog_vm.get_resource().get('name'), 'vapp': catalog_vapp.get_resource()}
 spec_pilot_b['target_vm_name'] = 'xanana-0-0-9'
 spec_pilot_b['hostname'] = 'xanana-0-0-9'
-# spec_pilot_b['network'] = 'oam' 
+spec_pilot_b['network'] = 'oam' 
 # spec_pilot_b['ip_allocation_mode'] = 'pool'
 
 vms = [spec_pilot_a, spec_pilot_b]
@@ -61,25 +64,4 @@ vms = [spec_pilot_a, spec_pilot_b]
 new_vapp.add_vms(vms, deploy=False, power_on=False, all_eulas_accepted=True)
 new_vapp.reload()
 
-# vapp = vapp_resource.instantiate_vapp(name=vapp_name)
-# vapp.add_vms_from_template(
-#     source_template_name=image_name,
-#     target_vm_names=['VDU1', 'VDU2']
-# )
-
-# Configure network connection
-# vapp.connect_vms(
-#     connections=[
-#         (network_name, 'VDU1', 'eth0'),
-#         (network_name, 'VDU2', 'eth0')
-#     ]
-# )
-
-# Set post-creation script
-# vapp.set_property('guest.customization.script', script_path)
-
-# Export vApp template
-# ovf_descriptor = vapp.export_ovf('vapp-template.ovf')
-
-# Disconnect from vCloud Director
 client.logout()
